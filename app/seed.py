@@ -28,7 +28,7 @@ def sample_quotes(today: date | None = None) -> list[dict]:
                          "address": "118 Sample Lane, Anytown, WI 00001"},
             "items": [
                 {"name": "Architectural shingle roof, 28 squares", "qty": 1, "unit_price": "16450.00"},
-                {"name": "Ice and water shield, full eaves", "qty": 1, "unit_price": "1250.00"},
+                {"name": "Ice and water shield, full perimeter", "qty": 1, "unit_price": "1250.00"},
                 {"name": "Ridge vent, 42 ft", "qty": 1, "unit_price": "750.00"},
             ],
             "discount_pct": "0.05", "currency": "USD",
@@ -68,13 +68,13 @@ def sample_quotes(today: date | None = None) -> list[dict]:
         },
         {
             "id": "Q-1045", "company": COMPANY, "rep": rep2, "region": "MIDWEST-SAMPLE",
-            "project": "Seamless gutters and guards",
+            "project": "Soffit and fascia replacement",
             "customer": {"first_name": "Riley", "last_name": "Brooks",
                          "email": "riley.brooks@example.com",
                          "address": "301 Demo Road, Anytown, WI 00004"},
             "items": [
-                {"name": "Seamless aluminum gutters, 160 ft", "qty": 1, "unit_price": "2900.00"},
-                {"name": "Micro-mesh guards, 160 ft", "qty": 1, "unit_price": "1950.00"},
+                {"name": "Vented aluminum soffit, 160 ft", "qty": 1, "unit_price": "2900.00"},
+                {"name": "Wrapped aluminum fascia, 160 ft", "qty": 1, "unit_price": "1950.00"},
             ],
             "discount_pct": "0.25", "currency": "USD",
             "signed_on": d(0), "valid_until": d(14),

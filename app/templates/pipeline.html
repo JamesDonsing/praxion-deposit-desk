@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Pipeline{% endblock %}
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Approve-first agentic commerce</p>
+    <h1>Collect the deposit before you leave the driveway.</h1>
+    <p class="lede">The agent drafts a PayPal deposit invoice from each signed quote and checks it against company policy. Nothing goes to the homeowner until a person approves it.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-n">{{ stats.awaiting }}</span><span class="stat-l">Awaiting approval</span></div>
+    <div class="stat"><span class="stat-n">{{ stats.sent }}</span><span class="stat-l">Invoices out</span></div>
+    <div class="stat"><span class="stat-n">{{ stats.collected|money }}</span><span class="stat-l">Deposits collected</span></div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card-head">
+      <h2>Signed quotes</h2>
+      <span class="chip chip-sample">Sample data</span>
+    </div>
+    <ul class="quote-list">
+      {% for r in rows %}
+      {% set st = r.q.stage %}
+      <li>
+        <a class="quote-row" href="/quotes/{{ r.q.id }}">
+          <div class="qr-main">
+            <span class="qid">{{ r.q.id }}</span>
+            <span class="qname">{{ r.q.customer.first_name }} {{ r.q.customer.last_name }}</span>
+            <span class="qproj">{{ r.q.project }} · {{ r.q.rep.name }}</span>
+          </div>
+          <div class="qr-side">
+            <span class="qamt">{{ r.m.total|money }}</span>
+            <span class="stage stage-{{ st }}">{{ STAGES[st] }}</span>
+          </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Agent activity</h2>
+      <form method="post" action="/demo/reset"><button class="btn btn-ghost btn-sm" title="Reload the fabricated sample data">Reset demo</button></form>
+    </div>
+    {% if feed %}
+    <ol class="feed">
+      {% for a in feed %}
+      <li class="feed-{{ a.kind }}">
+        <span class="feed-who">{{ a.actor }} · <a href="/quotes/{{ a.quote_id }}">{{ a.quote_id }}</a></span>
+        <span class="feed-text">{{ a.text }}</span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <div class="empty">
+      <p><strong>No activity yet.</strong></p>
+      <p>Open quote <a href="/quotes/Q-1042">Q-1042</a> and ask the agent to draft a deposit request.</p>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}How it works{% endblock %}
+{% block content %}
+<section class="title-row"><div>
+  <h1 class="h-quote">How it works</h1>
+  <p class="muted small">The agent asks for payment. A person says yes. PayPal collects and confirms.</p>
+</div></section>
+
+<ol class="flow">
+  <li><span class="flow-n">1</span><div><strong>Signed quote</strong><p>The job record holds line items, discount, region and expiry. Sample data only.</p></div></li>
+  <li><span class="flow-n">2</span><div><strong>Agent drafts</strong><p>The rules engine sizes the deposit. A language model, called through a server-side API, writes the invoice note and the homeowner message. Its output is schema-checked; it never sets an amount.</p></div></li>
+  <li><span class="flow-n">3</span><div><strong>Policy check</strong><p>Discount authority, deposit range, region caps, expiry, required fields, and whether the words match the money.</p></div></li>
+  <li><span class="flow-n">4</span><div><strong>Human approves</strong><p>Approve, edit or deny. The approval binds to a SHA-256 hash of the exact invoice and message. Any edit voids it.</p></div></li>
+  <li><span class="flow-n">5</span><div><strong>PayPal Invoicing</strong><p>Create, send and QR code through the Invoicing v2 API, with a PayPal-Request-Id so a double tap never makes two invoices.</p></div></li>
+  <li><span class="flow-n">6</span><div><strong>PayPal Webhooks</strong><p>Signature verified, sandbox-only, processed once. Paid, refunded and cancelled update the job, and the agent posts the next step.</p></div></li>
+</ol>
+
+<section class="card mt">
+  <div class="card-head"><h2>Policy in this demo</h2><span class="chip chip-sample">Sample policy</span></div>
+  <dl class="kv kv-wide">
+    <dt>Rep discount authority</dt><dd>Up to {{ policy.rep_discount_max|pct }}</dd>
+    <dt>Manager discount authority</dt><dd>Up to {{ policy.manager_discount_max|pct }}; above that is blocked</dd>
+    <dt>Deposit range</dt><dd>{{ policy.deposit_min_pct|pct }} to {{ policy.deposit_max_pct|pct }} (default {{ policy.default_deposit_pct|pct }})</dd>
+    <dt>Region cap (sample)</dt><dd>WEST-SAMPLE: lesser of 10% or $1,000. Configure to the rules where you operate.</dd>
+    <dt>Message check</dt><dd>Any dollar amount must match the quote; promise or pressure words are flagged</dd>
+  </dl>
+</section>
+{% endblock %}

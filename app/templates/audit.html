@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<section class="title-row">
+  <div>
+    <h1 class="h-quote">Audit log</h1>
+    <p class="muted small">Every human decision, every PayPal invoice and every webhook, in one place. Approvals bind to the SHA-256 hash of the exact invoice and message.</p>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Decisions</h2><span class="muted small">{{ approvals|length }}</span></div>
+  {% if approvals %}
+  <div class="table-wrap"><table class="tbl">
+    <thead><tr><th>When (UTC)</th><th>Quote</th><th>Draft</th><th>Decision</th><th>By</th><th>Hash</th><th>Reason</th></tr></thead>
+    <tbody>{% for a in approvals %}
+      <tr><td>{{ a.created_at[:16]|replace('T',' ') }}</td><td><a href="/quotes/{{ a.quote_id }}">{{ a.quote_id }}</a></td><td>v{{ a.version }}</td>
+      <td><span class="chip chip-{{ a.decision }}">{{ a.decision }}</span></td><td>{{ a.actor }}</td><td class="mono">{{ a.draft_hash[:12] }}</td><td>{{ a.reason or '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">No decisions yet.</p>{% endif %}
+</section>
+
+<div class="grid-2 mt">
+  <section class="card">
+    <div class="card-head"><h2>PayPal invoices</h2></div>
+    {% if invoices %}
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>Quote</th><th>Invoice</th><th>Amount</th><th>Status</th></tr></thead>
+      <tbody>{% for i in invoices %}
+        <tr><td><a href="/quotes/{{ i.quote_id }}/collect">{{ i.quote_id }}</a></td><td class="mono">{{ i.paypal_invoice_id }}</td><td>{{ i.amount|money }}</td><td><span class="chip chip-inv-{{ i.status|lower }}">{{ i.status }}</span></td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="muted">No invoices sent yet.</p>{% endif %}
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Webhook events</h2></div>
+    {% if events %}
+    <div class="table-wrap"><table class="tbl">
+      <thead><tr><th>Event</th><th>Type</th><th>Outcome</th></tr></thead>
+      <tbody>{% for e in events %}
+        <tr><td class="mono">{{ e.event_id[:18] }}</td><td>{{ e.event_type.split('.')[-1] }}</td><td>{{ e.outcome }}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    {% else %}<p class="muted">No verified webhooks yet. Unsigned or non-sandbox events are rejected before they reach this table.</p>{% endif %}
+  </section>
+</div>
+{% endblock %}

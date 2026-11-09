@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Collect {{ q.id }}{% endblock %}
+{% block content %}
+{% set paid = inv.status in ('PAID','MARKED_AS_PAID') %}
+<div class="crumbs"><a href="/">Pipeline</a> <span aria-hidden="true">/</span> <a href="/quotes/{{ q.id }}">{{ q.id }}</a> <span aria-hidden="true">/</span> Collect</div>
+
+<div class="grid-collect">
+  <section class="card collect {% if paid %}is-paid{% endif %}" id="collect" data-quote="{{ q.id }}" data-status="{{ inv.status }}">
+    <div class="card-head">
+      <h2>{{ q.customer.first_name }}'s deposit</h2>
+      <span class="chip chip-inv-{{ inv.status|lower }}" id="inv-status">{{ inv.status }}</span>
+    </div>
+    <div class="collect-amt">{{ inv.amount|money }}</div>
+    {% if paid %}
+      <div class="paid-badge" role="status">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Deposit paid through PayPal
+      </div>
+    {% elif inv.status in ('REFUNDED','CANCELLED') %}
+      <div class="paid-badge off" role="status">Invoice {{ inv.status|lower }}</div>
+    {% else %}
+      <figure class="qr">
+        <img src="/invoices/{{ q.id }}/qr.png" alt="QR code that opens the PayPal invoice payment page" width="240" height="240">
+        <figcaption>Homeowner scans to pay the PayPal invoice</figcaption>
+      </figure>
+      <a class="btn btn-ghost btn-block" href="{{ inv.payer_url }}" target="_blank" rel="noopener">Open payment page</a>
+      <p class="muted small center live"><span class="pulse"></span>Waiting for PayPal webhook…</p>
+    {% endif %}
+    <dl class="kv">
+      <dt>PayPal invoice</dt><dd class="mono">{{ inv.paypal_invoice_id }}</dd>
+      <dt>Request id</dt><dd class="mono">{{ inv.request_id[:28] }}…</dd>
+      <dt>Sent</dt><dd>{{ inv.created_at[:16]|replace('T',' ') }} UTC</dd>
+    </dl>
+    <div class="btn-row">
+      <form method="post" action="/quotes/{{ q.id }}/refresh"><button class="btn btn-ghost btn-sm">Check status with PayPal</button></form>
+      {% if settings.is_mock and not paid and inv.status not in ('REFUNDED','CANCELLED') %}
+      <form method="post" action="/mock-pay/{{ inv.paypal_invoice_id }}"><button class="btn btn-ghost btn-sm" title="Mock mode only">Simulate payment</button></form>
+      {% endif %}
+      {% if settings.is_mock and paid %}
+      <form method="post" action="/mock-pay/{{ inv.paypal_invoice_id }}"><input type="hidden" name="action" value="refund"><button class="btn btn-ghost btn-sm" title="Mock mode only">Simulate refund</button></form>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Agent updates</h2></div>
+    <ol class="feed" id="feed">
+      {% for a in activity %}
+      <li class="feed-{{ a.kind }}"><span class="feed-who">{{ a.actor }} · {{ a.created_at[11:16] }} UTC</span><span class="feed-text">{{ a.text }}</span></li>
+      {% endfor %}
+    </ol>
+    {% if tasks %}
+    <div class="card-head mt"><h2>Next steps queued</h2></div>
+    <ul class="tasks">
+      {% for t in tasks %}<li><span class="task-owner">{{ t.owner }}</span>{{ t.title }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var el = document.getElementById('collect');
+  if (!el) return;
+  var start = el.getAttribute('data-status');
+  if (['PAID', 'MARKED_AS_PAID', 'REFUNDED', 'CANCELLED'].indexOf(start) !== -1) return;
+  var tries = 0;
+  var t = setInterval(function () {
+    tries += 1;
+    if (tries > 200) { clearInterval(t); return; }
+    fetch('/api/quotes/' + encodeURIComponent(el.getAttribute('data-quote')) + '/status', {cache: 'no-store'})
+      .then(function (r) { return r.json(); })
+      .then(function (d) { if (d.invoice_status && d.invoice_status !== start) { location.reload(); } })
+      .catch(function () {});
+  }, 3000);
+})();
+</script>
+{% endblock %}

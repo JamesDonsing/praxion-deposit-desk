@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ q.id }}{% endblock %}
+{% block content %}
+<div class="crumbs"><a href="/">Pipeline</a> <span aria-hidden="true">/</span> <a href="/quotes/{{ q.id }}">{{ q.id }}</a> <span aria-hidden="true">/</span> Edit v{{ d.version }}</div>
+<section class="card narrow">
+  <div class="card-head"><h2>Edit deposit request</h2><span class="chip chip-pending">Saves as v{{ d.version + 1 }}</span></div>
+  <p class="muted">Saving creates a new version, re-runs every policy check and voids any earlier approval. The amount is always recomputed by the rules engine.</p>
+  <form method="post" action="/drafts/{{ d.id }}/edit" class="form">
+    <label for="deposit_pct">Deposit percent</label>
+    <div class="input-suffix">
+      <input id="deposit_pct" name="deposit_pct" class="input" inputmode="decimal" placeholder="{{ (money.deposit_pct|float * 100)|round(2) }}">
+      <span>%</span>
+    </div>
+    <p class="muted small">Leave blank to keep {{ money.deposit|money }}. Project total {{ money.total|money }}.</p>
+    <label class="check"><input type="checkbox" name="redraft" value="1" checked> If the amount changes and you leave the message as is, let the agent reword it</label>
+    <label for="message">Message to homeowner</label>
+    <textarea id="message" name="message" class="input" rows="8" maxlength="1200">{{ d.message }}</textarea>
+    <p class="muted small">Any dollar amount you type must match the quote, or the rules engine blocks the draft.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary">Save new version</button>
+      <a class="btn btn-ghost" href="/quotes/{{ q.id }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

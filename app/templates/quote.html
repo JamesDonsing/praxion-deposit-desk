@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ q.id }}{% endblock %}
+{% block content %}
+{% set st = q.stage %}
+{% set step = 1 if not draft else (3 if inv else 2) %}
+<div class="crumbs"><a href="/">Pipeline</a> <span aria-hidden="true">/</span> {{ q.id }}</div>
+
+<section class="title-row">
+  <div>
+    <h1 class="h-quote">{{ q.customer.first_name }} {{ q.customer.last_name }} <span class="muted">· {{ q.project }}</span></h1>
+    <p class="muted small">{{ q.customer.address }} · Rep {{ q.rep.name }} · Signed {{ q.signed_on }} · Valid until {{ q.valid_until }}</p>
+  </div>
+  <span class="stage stage-{{ st }} stage-lg">{{ STAGES[st] }}</span>
+</section>
+
+<ol class="steps" aria-label="Progress">
+  <li class="{{ 'done' if step > 1 else 'on' }}"><span>1</span>Review</li>
+  <li class="{{ 'done' if step > 2 or st in ('approved',) else ('on' if step == 2 else '') }}"><span>2</span>Approve</li>
+  <li class="{{ 'done' if st == 'paid' else ('on' if step == 3 else '') }}"><span>3</span>Collect</li>
+</ol>
+
+<div class="grid-q">
+  <section class="card">
+    <div class="card-head"><h2>Signed quote</h2><span class="chip chip-sample">Sample data</span></div>
+    <table class="items">
+      <tbody>
+      {% for it in q["items"] %}
+        <tr><td>{{ it.name }}{% if it.qty != 1 %} <span class="muted">× {{ it.qty }}</span>{% endif %}</td><td class="num">{{ (it.qty * (it.unit_price|float))|money }}</td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr><td>Subtotal</td><td class="num">{{ m.subtotal|money }}</td></tr>
+        {% if m.discount > 0 %}<tr><td>Discount ({{ m.discount_pct|pct }})</td><td class="num">−{{ m.discount|money }}</td></tr>{% endif %}
+        <tr class="total"><td>Project total</td><td class="num">{{ m.total|money }}</td></tr>
+      </tfoot>
+    </table>
+    <p class="note">{{ q.note }}</p>
+    {% if not draft or draft.status in ('superseded',) or (st in ('cancelled','refunded','denied')) %}
+    <form method="post" action="/quotes/{{ q.id }}/draft" class="mt">
+      <button class="btn btn-primary btn-block">{{ 'Draft a new deposit request' if draft else 'Draft deposit request' }}</button>
+    </form>
+    <p class="muted small center">The agent drafts. You decide. Nothing is sent without approval.</p>
+    {% endif %}
+  </section>
+
+  <section class="card {% if draft %}card-draft{% endif %}">
+    {% if not draft %}
+      <div class="card-head"><h2>Deposit request</h2></div>
+      <div class="empty">
+        <p><strong>No draft yet.</strong></p>
+        <p>The agent will size the deposit with the rules engine, write the invoice note and customer message, and flag anything outside policy.</p>
+      </div>
+    {% else %}
+      {% set money_ = draft.money|fromjson %}
+      {% set payload = draft.payload|fromjson %}
+      <div class="card-head">
+        <h2>Deposit request <span class="muted">v{{ draft.version }}</span></h2>
+        <span class="chip chip-{{ draft.status }}">{{ draft.status|capitalize }}</span>
+      </div>
+      <div class="deposit">
+        <div>
+          <span class="deposit-n">{{ money_.deposit|money }}</span>
+          <span class="deposit-l">{{ money_.deposit_pct|pct }} deposit · balance {{ money_.balance|money }} at completion</span>
+        </div>
+        <span class="pp-pill">PayPal Invoicing</span>
+      </div>
+
+      <div class="policy policy-{{ worst }}">
+        <div class="policy-head">
+          {% if worst == 'clear' %}<strong>Policy check clear</strong>
+          {% elif worst == 'block' %}<strong>Blocked by policy</strong>
+          {% elif worst == 'manager' %}<strong>Manager approval required</strong>
+          {% elif worst == 'warn' %}<strong>Review the warnings</strong>
+          {% else %}<strong>Policy check clear</strong>{% endif %}
+          <span class="muted small">Rules engine · deterministic</span>
+        </div>
+        {% if flags %}
+        <ul class="flags">
+          {% for f in flags %}<li class="flag flag-{{ f.severity }}"><span class="sev">{{ f.severity }}</span>{{ f.text }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+
+      <div class="msg">
+        <span class="label">Message to homeowner</span>
+        <p>{{ draft.message }}</p>
+      </div>
+      <dl class="kv">
+        <dt>Invoice line</dt><dd>{{ payload["items"][0].name }}: {{ payload["items"][0].description }}</dd>
+        <dt>Invoice note</dt><dd>{{ payload.detail.note }}</dd>
+        <dt>Due</dt><dd>{{ payload.detail.payment_term.due_date }}</dd>
+        <dt>Bill to</dt><dd>{{ payload.primary_recipients[0].billing_info.email_address }}</dd>
+        <dt>Drafted by</dt><dd>{{ {'llm':'Agent (LLM API)','offline':'Agent (offline templates)','offline-fallback':'Agent (template fallback)','edited':'Edited by a person','edited+agent':'Edited by a person, reworded by the agent'}[draft.source] }}</dd>
+        <dt>Approval hash</dt><dd class="mono">{{ draft.hash[:24] }}…</dd>
+      </dl>
+      {% set notes = draft.agent_notes|fromjson %}
+      {% if notes %}
+      <div class="notes"><span class="label">Agent notes (advisory; rules decide)</span>
+        <ul>{% for n in notes %}<li>{{ n }}</li>{% endfor %}</ul></div>
+      {% endif %}
+
+      {% if draft.status == 'pending' %}
+      <form method="post" action="/drafts/{{ draft.id }}/decide" class="decide">
+        <input type="hidden" name="draft_hash" value="{{ draft.hash }}">
+        <label class="sr" for="reason">Reason (optional)</label>
+        <input id="reason" name="reason" class="input" placeholder="Note for the log (optional)" maxlength="300">
+        <div class="btn-row">
+          <button class="btn btn-primary" name="decision" value="approve" {% if not can_approve %}disabled aria-disabled="true"{% endif %}>Approve</button>
+          <a class="btn btn-ghost" href="/drafts/{{ draft.id }}/edit">Edit</a>
+          <button class="btn btn-danger" name="decision" value="deny">Deny</button>
+        </div>
+        {% if not can_approve %}<p class="why">{{ why }}</p>{% endif %}
+        <p class="muted small">Signed in as <strong>{{ seat.name }}</strong>. Your decision is logged with the hash above.</p>
+      </form>
+      {% elif draft.status == 'approved' %}
+      <form method="post" action="/drafts/{{ draft.id }}/send" class="decide">
+        <button class="btn btn-primary btn-block">Send through PayPal</button>
+        <div class="btn-row"><a class="btn btn-ghost" href="/drafts/{{ draft.id }}/edit">Edit (voids approval)</a></div>
+        <p class="muted small">Creates the PayPal invoice, sends it to the homeowner and returns a pay QR code.</p>
+      </form>
+      {% elif draft.status == 'denied' %}
+      <div class="decide"><a class="btn btn-ghost btn-block" href="/drafts/{{ draft.id }}/edit">Revise and resubmit</a></div>
+      {% elif inv %}
+      <div class="decide"><a class="btn btn-primary btn-block" href="/quotes/{{ q.id }}/collect">Open collect screen</a>
+        <p class="muted small center">PayPal invoice {{ inv.paypal_invoice_id }} · {{ inv.status }}</p></div>
+      {% endif %}
+    {% endif %}
+  </section>
+</div>
+
+<section class="card mt">
+  <div class="card-head"><h2>Timeline</h2></div>
+  {% if activity %}
+  <ol class="feed">
+    {% for a in activity %}
+    <li class="feed-{{ a.kind }}"><span class="feed-who">{{ a.actor }} · {{ a.created_at[11:16] }} UTC</span><span class="feed-text">{{ a.text }}</span></li>
+    {% endfor %}
+  </ol>
+  {% else %}<p class="muted">Nothing yet.</p>{% endif %}
+</section>
+{% endblock %}

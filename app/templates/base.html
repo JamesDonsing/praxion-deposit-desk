@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#141414">
+  <title>{% block title %}Deposit Desk{% endblock %} · Praxion</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20viewBox%3D%22-6%20-6%20112%20162%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M0%200H100V100H22V150H0Z%22%20fill%3D%22%23fff%22%20stroke%3D%22%23fff%22%20stroke-width%3D%2212%22%20stroke-linejoin%3D%22round%22/%3E%3Crect%20x%3D%220%22%20y%3D%22104%22%20width%3D%2222%22%20height%3D%2246%22%20fill%3D%22%23141414%22/%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%22100%22%20height%3D%22100%22%20fill%3D%22%23fff%22/%3E%3Cpath%20d%3D%22M0%200H100V19H22V59H60V42H77V79H0Z%22%20fill%3D%22%23141414%22/%3E%3Cpath%20d%3D%22M24%2021H100V100H0V81H79V40H36V57H24Z%22%20fill%3D%22%233d9b3f%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="demo-bar" role="note">
+    <span class="dot"></span>
+    <span><strong>Demo.</strong> {% if settings.is_mock %}Mock mode: PayPal calls are simulated locally.{% else %}PayPal sandbox: nothing is charged.{% endif %}</span>
+    <span class="chip chip-sample">Fabricated sample data</span>
+  </div>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="/" aria-label="Praxion Deposit Desk home">
+        {% include "_mark.html" %}
+        <span class="brand-word">Praxion</span>
+        <span class="brand-sep" aria-hidden="true"></span>
+        <span class="brand-sub">Deposit Desk</span>
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="/" class="{% if request.url.path == '/' %}on{% endif %}">Pipeline</a>
+        <a href="/audit" class="{% if request.url.path == '/audit' %}on{% endif %}">Audit log</a>
+        <a href="/how-it-works" class="{% if request.url.path == '/how-it-works' %}on{% endif %}">How it works</a>
+      </nav>
+      <form class="seat" method="post" action="/seat" aria-label="Signed-in seat">
+        <input type="hidden" name="next" value="{{ request.url.path }}">
+        <span class="seat-label">Seat</span>
+        <button name="seat" value="rep" class="{% if seat.role == 'rep' %}on{% endif %}" title="Dana Reyes, field rep (fictional)">Rep</button>
+        <button name="seat" value="manager" class="{% if seat.role == 'manager' %}on{% endif %}" title="Alex Kim, sales manager (fictional)">Manager</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% if flash %}<div class="toast ok" role="status">{{ flash }}</div>{% endif %}
+    {% if err %}<div class="toast bad" role="alert">{{ err }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot">
+    <div class="wrap foot-inner">
+      <span>© 2026 Praxion Agentic CRM Solutions. All rights reserved. Code released under the MIT License.</span>
+      <span>Every name, address, email and amount shown is fabricated sample data. · {{ gateway_label }} · Drafting: {{ 'LLM API' if llm_on else 'offline templates' }}</span>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

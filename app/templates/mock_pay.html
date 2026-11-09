@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Simulated payer{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <div class="card-head"><h2>Simulated payer page</h2><span class="chip chip-pending">Mock mode</span></div>
+  <p class="muted">In sandbox mode this QR code opens PayPal's hosted invoice page, where a sandbox buyer account pays. In mock mode no PayPal call is made; this page stands in for it and fires a signed webhook through the same verification path.</p>
+  <div class="collect-amt">{{ inv.amount|money }}</div>
+  <p class="center">Deposit for {{ q.customer.first_name }} {{ q.customer.last_name }} · {{ q.project }}</p>
+  {% if inv.status in ('PAID','MARKED_AS_PAID') %}
+    <div class="paid-badge" role="status">Already paid</div>
+  {% else %}
+  <form method="post" action="/mock-pay/{{ inv.paypal_invoice_id }}">
+    <button class="btn btn-primary btn-block">Simulate payment</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}
